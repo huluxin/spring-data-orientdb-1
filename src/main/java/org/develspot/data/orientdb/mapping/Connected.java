@@ -23,6 +23,8 @@ import java.lang.annotation.Target;
 
 import org.springframework.data.annotation.Reference;
 
+import com.tinkerpop.blueprints.Direction;
+
 /**
  * An annotation that indicates that an entity is connected with an another
  * 
@@ -36,6 +38,8 @@ import org.springframework.data.annotation.Reference;
 public @interface Connected {
 
 	String edgeType();
+	
+	Direction direction() default Direction.OUT;
 	
 	boolean lazy() default false;
 }
