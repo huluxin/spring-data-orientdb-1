@@ -42,7 +42,7 @@ public abstract class AbstractOrientConverter implements OrientConverter, Initia
 
 
 	/*
-	 * converts the orient recordId into a string, the bytes of this String will be used to create a bigInteger
+	 * converts the orient recordId into a bigInteger using a pairing function
 	 */
 	public static enum ORecordIdToBigIntegerConverter implements Converter<ORecordId, BigInteger> {
 		INSTANCE;
@@ -51,7 +51,7 @@ public abstract class AbstractOrientConverter implements OrientConverter, Initia
 			if(id == null)
 				return null;
 			
-			return OrientUtils.cantorPair(id.getClusterId(), id.getClusterPosition().longValue());
+			return OrientUtils.elegantPair(id.getClusterId(), id.getClusterPosition().longValue());
 		}
 	}
 	

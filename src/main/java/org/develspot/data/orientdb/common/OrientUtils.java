@@ -66,40 +66,6 @@ public class OrientUtils {
 		
 	}
 	
-	/**
-	 * Cantor Pairing
-	 * @param n1
-	 * @param n2
-	 * @return
-	 */
-	public static BigInteger cantorPair(long n1, long n2) {
-		BigInteger two = BigInteger.valueOf(2L);
-
-		BigInteger x = BigInteger.valueOf(n1);
-		BigInteger y = BigInteger.valueOf(n2);
-		
-		return y.add(x.add(y).divide(two).multiply(x.add(y).add(BigInteger.ONE)));
-	}
-	
-	/**
-	 * 
-	 * @param z a paired bigInteger (by two long values)
-	 * @return
-	 */
-	public static long[] cantorUnpair(BigInteger z) {
-		BigInteger two = BigInteger.valueOf(2L);
-		
-		BigInteger q = bigIntSqRootFloor(BigInteger.valueOf(8).multiply(z).add(BigInteger.ONE)).subtract(BigInteger.ONE).divide(two);
-		
-		long n2 = z.subtract(q.multiply(q.add(BigInteger.ONE)).divide(two)).longValue();
-		long n1 = q.subtract(BigInteger.valueOf(n2)).longValue();
-		
-		
-		return new long[]{n1,n2};
-		
-		
-	}
-	
 	
 	/**
 	 * Elegant pairing (@see http://szudzik.com/ElegantPairing.pdf)

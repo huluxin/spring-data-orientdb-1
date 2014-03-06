@@ -28,19 +28,6 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 @ContextConfiguration(locations = {"classpath:context-test.xml"})
 public class PairingFunctionTest {
 
-	@Test
-	public void testCantorPairing() {
-		long n1 = 1212;
-		long n2 = 1212;
-		
-		BigInteger cantorPair = OrientUtils.cantorPair(n1, n2);
-		
-		long[] cantorUnpair = OrientUtils.cantorUnpair(cantorPair);
-		
-		Assert.assertEquals(n1, cantorUnpair[0]);
-		Assert.assertEquals(n2, cantorUnpair[1]);
-		
-	}
 	
 	@Test
 	public void testElegantPairing() {

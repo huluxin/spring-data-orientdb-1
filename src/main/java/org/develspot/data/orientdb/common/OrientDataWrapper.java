@@ -23,6 +23,9 @@ public class OrientDataWrapper<T extends OrientElement> {
 		return elements.size() == 1;
 	}
 	
+	public boolean isEmpty() {
+		return elements.isEmpty();
+	}
 	
 	public T getOrientElement() {
 		return elements.iterator().next();
@@ -30,6 +33,11 @@ public class OrientDataWrapper<T extends OrientElement> {
 	
 	public Collection<T> getElements() {
 		return elements;
+	}
+	
+	
+	public int size() {
+		return elements.size();
 	}
 	
 	private Set<T> elements;

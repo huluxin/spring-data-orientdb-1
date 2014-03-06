@@ -1,7 +1,14 @@
 package org.develspot.data.orientdb.convert;
 
+import java.util.ArrayList;
+import java.util.Collection;
+
+import org.develspot.data.orientdb.common.OrientConverterException;
 import org.develspot.data.orientdb.common.OrientDataWrapper;
 import org.develspot.data.orientdb.mapping.OrientPersistentProperty;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.core.CollectionFactory;
 import org.springframework.data.mapping.model.DefaultSpELExpressionEvaluator;
 import org.springframework.data.mapping.model.PropertyValueProvider;
 import org.springframework.data.mapping.model.SpELContext;
@@ -9,7 +16,6 @@ import org.springframework.data.mapping.model.SpELExpressionEvaluator;
 import org.springframework.data.util.TypeInformation;
 import org.springframework.util.Assert;
 
-import com.tinkerpop.blueprints.impls.orient.OrientElement;
 import com.tinkerpop.blueprints.impls.orient.OrientVertex;
 
 public class OrientDBPropertyValueProvider implements PropertyValueProvider<OrientPersistentProperty> {
@@ -36,25 +42,39 @@ public class OrientDBPropertyValueProvider implements PropertyValueProvider<Orie
 	public <T> T getPropertyValue(OrientPersistentProperty property) {
 
 		String expression = property.getSpelExpression();
-		if(source.isSingleElement()) {
-			OrientVertex orientElement = source.getOrientElement();
-			TypeInformation<?> typeInformation = property.getTypeInformation();
+		TypeInformation<?> typeInformation = property.getTypeInformation();
+		
+		if(property.isAssociation()) {
+			if(source.isEmpty()) {
+				return null;
+			}
 			
-			if(property.isAssociation()) {
-				return (T) converter.read(typeInformation.getType(), orientElement);
+			if(property.isCollectionLike()) {
+				//create the collection
+				Collection<Object> collection = createCollection(typeInformation);
+				TypeInformation<?> componentType = typeInformation.getComponentType();
+				if(componentType == null) {
+					log.error("Cannot get component type of collection for property: " + property);
+					throw new OrientConverterException("cannot get componentType for property: " + property);
+				}
+				
+				for(OrientVertex  ov : source.getElements()) {
+					collection.add(converter.read(componentType.getType(), ov));
+				}
+				return (T) collection;
 			}
 			else {
-				Object value = expression != null ? evaluator.evaluate(expression) : orientElement.getProperty(property.getField().getName());
-				if (value == null) {
-					return null;
-				}
-	
-				return readValue(value, typeInformation);				
+				return (T) converter.read(typeInformation.getType(), source.getOrientElement());					
 			}
-			
 		}
 		else {
-			throw new UnsupportedOperationException("not supported at the moment");
+			
+			Object value = expression != null ? evaluator.evaluate(expression) : source.getOrientElement().getProperty(property.getField().getName());
+			if (value == null) {
+				return null;
+			}
+
+			return readValue(value, typeInformation);		
 		}
 	}
 	
@@ -66,6 +86,15 @@ public class OrientDBPropertyValueProvider implements PropertyValueProvider<Orie
 		return target.isAssignableFrom(value.getClass()) ? (T)value : (T)converter.conversionService.convert(value, target);	
 	}
 	
+	
+	private Collection<Object> createCollection(TypeInformation<?> typeInformation) {
+		Class<?> collectionType = typeInformation.getType();
+		
+		return (collectionType.isArray()) ? new ArrayList<Object>() : CollectionFactory.createCollection(collectionType, source.size());
+	}
+	
+	
+	private static final Logger log = LoggerFactory.getLogger(OrientDBPropertyValueProvider.class);
 	
 	private MappingOrientConverter converter;
 	private final SpELExpressionEvaluator evaluator;
