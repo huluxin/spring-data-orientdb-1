@@ -22,7 +22,25 @@ public class BasicOrientPersistentEntity<T> extends BasicPersistentEntity<T, Ori
 
 	public BasicOrientPersistentEntity(TypeInformation<T> information) {
 		super(information);
-		// TODO Auto-generated constructor stub
+		
+		Class<T> rawType = information.getType();
+		//default
+		this.vertexType = rawType.getSimpleName();
+		//check if annotation is present
+		if(rawType.isAnnotationPresent(VertexType.class)) {
+			VertexType annotation = rawType.getAnnotation(VertexType.class);
+			if(!annotation.value().isEmpty()) {
+				this.vertexType = annotation.value();
+			}
+		}
+	}
+	
+	
+
+	public String getVertexType() {
+		return vertexType;
 	}
 
+	
+	private String vertexType;
 }

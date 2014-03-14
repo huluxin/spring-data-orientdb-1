@@ -62,5 +62,5 @@ public class MappingOrientConverterTest extends AbstractDBTest {
 		private String lastname;
 		
 	}
-	
+
 }

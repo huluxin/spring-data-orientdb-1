@@ -13,33 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package org.develspot.data;
+package org.develspot.data.orientdb.mapping;
 
-import org.develspot.data.orientdb.IOrientDataSource;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.runner.RunWith;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-@RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(locations = {"classpath:context-test.xml"})
-public abstract class AbstractDBTest {
+import org.springframework.data.annotation.Reference;
 
-	@Before
-	public void setup() {
-		((MockDataSource)orientDatasource).recreateDatabase();
-		
-	}
-	
-	@After
-	public void after() {
-		((MockDataSource)orientDatasource).dropDatabase();
-	}
-	
-	
-	@Autowired
-	protected IOrientDataSource orientDatasource;
-	
+/**
+ * An annotation that indicates the type of the vertex
+ * 
+ * @author rico
+ *
+ */
+@Documented
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ElementType.TYPE})
+@Reference
+public @interface VertexType {
+
+	String value() default "";
 }

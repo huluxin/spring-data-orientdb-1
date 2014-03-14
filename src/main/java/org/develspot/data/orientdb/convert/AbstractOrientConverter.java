@@ -26,6 +26,7 @@ import org.springframework.core.convert.converter.Converter;
 import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.core.convert.support.GenericConversionService;
 
+import com.orientechnologies.orient.core.id.OClusterPositionLong;
 import com.orientechnologies.orient.core.id.ORecordId;
 
 
@@ -56,6 +57,24 @@ public abstract class AbstractOrientConverter implements OrientConverter, Initia
 	}
 	
 	
+	/*
+	 * converts the orient recordId into a bigInteger using a pairing function
+	 */
+	public static enum BigIntegerToORecordIdConverter implements Converter<BigInteger,ORecordId> {
+		INSTANCE;
+
+		public ORecordId convert(BigInteger id) {
+			if(id == null)
+				return null;
+			
+			long[] idParts = OrientUtils.elegantUnpair(id);
+			
+			return new ORecordId((int)idParts[0], new OClusterPositionLong(idParts[1]));
+		}
+	}
+	
+	
+	
 	public void afterPropertiesSet() throws Exception {
 		initializeConverters();
 	}
@@ -63,6 +82,7 @@ public abstract class AbstractOrientConverter implements OrientConverter, Initia
 	
 	private void initializeConverters() {
 		conversionService.addConverter(ORecordIdToBigIntegerConverter.INSTANCE);
+		conversionService.addConverter(BigIntegerToORecordIdConverter.INSTANCE);
 	}
 	
 	protected final GenericConversionService conversionService;

@@ -19,6 +19,6 @@ import org.springframework.data.mapping.PersistentEntity;
 
 public interface OrientPersistentEntity<T> extends PersistentEntity<T, OrientPersistentProperty> {
 
-	
+	public String getVertexType();
 	
 }
