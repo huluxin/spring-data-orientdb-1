@@ -13,6 +13,7 @@ import org.springframework.data.mapping.model.DefaultSpELExpressionEvaluator;
 import org.springframework.data.mapping.model.PropertyValueProvider;
 import org.springframework.data.mapping.model.SpELContext;
 import org.springframework.data.mapping.model.SpELExpressionEvaluator;
+import org.springframework.data.util.ClassTypeInformation;
 import org.springframework.data.util.TypeInformation;
 import org.springframework.util.Assert;
 
@@ -20,19 +21,22 @@ import com.tinkerpop.blueprints.impls.orient.OrientVertex;
 
 public class OrientDBPropertyValueProvider implements PropertyValueProvider<OrientPersistentProperty> {
 
-	public OrientDBPropertyValueProvider(OrientDataWrapper<OrientVertex> source, SpELContext factory, MappingOrientConverter converter) {
-		this(source, new DefaultSpELExpressionEvaluator(source, factory), converter);
+	public OrientDBPropertyValueProvider(OrientDataWrapper<OrientVertex> source, SpELContext factory, MappingOrientConverter converter, ReadSession readSession) {
+		this(source, new DefaultSpELExpressionEvaluator(source, factory), converter, readSession);
 	}
 
-	public OrientDBPropertyValueProvider(OrientDataWrapper<OrientVertex> source, DefaultSpELExpressionEvaluator evaluator, MappingOrientConverter converter) {
+	public OrientDBPropertyValueProvider(OrientDataWrapper<OrientVertex> source, DefaultSpELExpressionEvaluator evaluator, MappingOrientConverter converter,
+			ReadSession readSession) {
 
 		Assert.notNull(source);
 		Assert.notNull(evaluator);
 		Assert.notNull(converter);
+		Assert.notNull(readSession);
 
 		this.source = source;
 		this.evaluator = evaluator;
 		this.converter = converter;
+		this.readSession = readSession;
 	}
 
 	/* 
@@ -59,12 +63,12 @@ public class OrientDBPropertyValueProvider implements PropertyValueProvider<Orie
 				}
 				
 				for(OrientVertex  ov : source.getElements()) {
-					collection.add(converter.read(componentType.getType(), ov));
+					collection.add(converter.read(ClassTypeInformation.from(componentType.getType()), ov, readSession));
 				}
 				return (T) collection;
 			}
 			else {
-				return (T) converter.read(typeInformation.getType(), source.getOrientElement());					
+				return (T) converter.read(ClassTypeInformation.from(typeInformation.getType()), source.getOrientElement(), readSession);					
 			}
 		}
 		else {
@@ -99,4 +103,5 @@ public class OrientDBPropertyValueProvider implements PropertyValueProvider<Orie
 	private MappingOrientConverter converter;
 	private final SpELExpressionEvaluator evaluator;
 	private final OrientDataWrapper<OrientVertex> source;
+	private ReadSession readSession;
 }

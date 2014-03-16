@@ -17,6 +17,7 @@ package org.develspot.data;
 
 import org.develspot.data.orientdb.convert.DefaultConnectionResolver;
 import org.develspot.data.orientdb.convert.MappingOrientConverter;
+import org.develspot.data.orientdb.mapping.Connected;
 import org.develspot.data.orientdb.mapping.OrientMappingContext;
 import org.junit.Assert;
 import org.junit.Test;
@@ -41,9 +42,22 @@ public class MappingOrientConverterTest extends AbstractDBTest {
 		customerVertex.setProperty("firstname", "Rheuma");
 		customerVertex.setProperty("lastname", "Kai");
 		
+		OrientVertex address = orientGraph.addVertex("class:Address");
+		orientGraph.addEdge(null, customerVertex, address, "has");
+		
+		
+		OrientVertex related = orientGraph.addVertex("class:Related");
+		orientGraph.addEdge(null, customerVertex, related, "contains");
+		orientGraph.addEdge(null, address, related, "contains");
+		
 		Customer cust = converter.read(Customer.class, customerVertex);
+		
 		Assert.assertEquals("Rheuma", cust.provideFirstname());
 		Assert.assertEquals("Kai", cust.provideLastname());
+		
+		Assert.assertEquals(cust.x, cust.address.x);
+		
+		
 	}
 	
 	
@@ -61,6 +75,21 @@ public class MappingOrientConverterTest extends AbstractDBTest {
 		private String firstname;
 		private String lastname;
 		
+		@Connected(edgeType="has")
+		private Address address;
+		
+		@Connected(edgeType="contains")
+		private Related x;
+		
 	}
 
+	class Address {
+		@Connected(edgeType="contains")
+		private Related x;
+	}
+	
+	
+	class Related {
+		
+	}
 }
