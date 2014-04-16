@@ -2,12 +2,8 @@ package org.develspot.data;
 
 import java.math.BigInteger;
 
-import org.develspot.data.orientdb.common.OrientUtils;
-import org.develspot.data.orientdb.convert.DefaultConnectionResolver;
 import org.develspot.data.orientdb.convert.MappingOrientConverter;
-import org.develspot.data.orientdb.mapping.OrientMappingContext;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;

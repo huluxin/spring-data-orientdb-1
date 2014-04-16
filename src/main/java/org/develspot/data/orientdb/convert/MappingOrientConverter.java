@@ -15,12 +15,7 @@
  ******************************************************************************/
 package org.develspot.data.orientdb.convert;
 
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Set;
-
-import org.develspot.data.orientdb.common.OrientDataWrapper;
-import org.develspot.data.orientdb.mapping.Connected;
+import org.develspot.data.orientdb.common.MappingInstanceHolder;
 import org.develspot.data.orientdb.mapping.OrientPersistentEntity;
 import org.develspot.data.orientdb.mapping.OrientPersistentProperty;
 import org.slf4j.Logger;
@@ -34,29 +29,22 @@ import org.springframework.data.mapping.AssociationHandler;
 import org.springframework.data.mapping.PropertyHandler;
 import org.springframework.data.mapping.context.MappingContext;
 import org.springframework.data.mapping.model.BeanWrapper;
-import org.springframework.data.mapping.model.DefaultSpELExpressionEvaluator;
-import org.springframework.data.mapping.model.ParameterValueProvider;
 import org.springframework.data.mapping.model.PersistentEntityParameterValueProvider;
 import org.springframework.data.mapping.model.SpELContext;
-import org.springframework.data.mapping.model.SpELExpressionEvaluator;
 import org.springframework.data.util.ClassTypeInformation;
 import org.springframework.data.util.TypeInformation;
 import org.springframework.util.Assert;
 
-import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.impls.orient.OrientElement;
-import com.tinkerpop.blueprints.impls.orient.OrientVertex;
 
 public class MappingOrientConverter extends AbstractOrientConverter {
 
-	public MappingOrientConverter(MappingContext<? extends OrientPersistentEntity<?>, OrientPersistentProperty> mappingContext,
-						IConnectionResolver connectionResolver) {
+	public MappingOrientConverter(MappingContext<? extends OrientPersistentEntity<?>, OrientPersistentProperty> mappingContext) {
 		super(new DefaultConversionService());
 		Assert.notNull(mappingContext, "MappingContext should not be null!");
 		this.mappingContext = mappingContext;
 		this.spELContext = new SpELContext(new MapAccessor());
 		this.fieldAccessOnly = true;
-		this.connectionResolver = connectionResolver;
 	}
 	
 	public MappingContext<? extends OrientPersistentEntity<?>, OrientPersistentProperty> getMappingContext() {
@@ -68,15 +56,17 @@ public class MappingOrientConverter extends AbstractOrientConverter {
 		if(log.isTraceEnabled()) {
 			log.trace("reading type: " + type + " from orientElement: " + source.getId());
 		}
-		return read(ClassTypeInformation.from(type), source, new ReadSession());
+		
+		return readInternal(ClassTypeInformation.from(type), source, false);
 		
 	}
 	
 	
 	@SuppressWarnings("unchecked")
-	protected <S extends Object> S read(TypeInformation<S> typeInformation, OrientElement source, ReadSession readSession) {
+	protected <S extends Object> S readInternal(TypeInformation<S> typeInformation, OrientElement dbObject, boolean lazy) {
 		OrientPersistentEntity<S> persistentEntity = (OrientPersistentEntity<S>)mappingContext.getPersistentEntity(typeInformation);
-		return read(persistentEntity, source, readSession);
+		
+		return read(persistentEntity, dbObject, lazy);
 	}
 	
 	
@@ -86,108 +76,53 @@ public class MappingOrientConverter extends AbstractOrientConverter {
 
 	}
 
-	private ParameterValueProvider<OrientPersistentProperty> getParameterProvider(OrientPersistentEntity<?> entity,
-			OrientVertex source, DefaultSpELExpressionEvaluator evaluator, ReadSession readSession) {
-
-		OrientDBPropertyValueProvider provider = new OrientDBPropertyValueProvider(new OrientDataWrapper<OrientVertex>(source), evaluator, this, readSession);
-		PersistentEntityParameterValueProvider<OrientPersistentProperty> parameterProvider = new PersistentEntityParameterValueProvider<OrientPersistentProperty>(
-				entity, provider, null);
-
-		return parameterProvider;
-	}
-
+	
 	
 	@SuppressWarnings("unchecked")
-	private <S extends Object> S read(final OrientPersistentEntity<S> entity, final OrientElement dbObject, final ReadSession readSession) {
+	private <S extends Object> S read(final OrientPersistentEntity<S> entity, final OrientElement dbObject, boolean lazy) {
+		OrientMappingInstance mappingInstance = MappingInstanceHolder.getMappingInstance();
 		
-		if(readSession.instanceAvailable(dbObject.getId())) {
-			return (S) readSession.get(dbObject.getId());
+		//check if entity is already loaded
+		if(mappingInstance.instanceLoaded(dbObject.getId())) {
+			return (S)mappingInstance.get(dbObject.getId());
 		}
-		
+				
 		EntityInstantiator instantiator = instantiators.getInstantiatorFor(entity);
-		final DefaultSpELExpressionEvaluator evaluator = new DefaultSpELExpressionEvaluator(dbObject, spELContext);
+		final DefaultOrientPropertyValueProvider objectResolver = new DefaultOrientPropertyValueProvider(dbObject, this, spELContext, lazy);
 		
-		ParameterValueProvider<OrientPersistentProperty> parameterProvider = getParameterProvider(entity, (OrientVertex)dbObject, evaluator, readSession);
+		PersistentEntityParameterValueProvider<OrientPersistentProperty> parameterProvider = new PersistentEntityParameterValueProvider<OrientPersistentProperty>(
+				entity, objectResolver, null);
+		
 		S instance = instantiator.createInstance(entity, parameterProvider);
-		
 		final BeanWrapper<OrientPersistentEntity<S>, S> wrapper = BeanWrapper.create(instance, conversionService);
-		final S result = wrapper.getBean();
 		
-		readSession.add(dbObject.getId(), result);
+		
+		final S result = wrapper.getBean();
+		mappingInstance.addInstance(dbObject.getId(), result);
+		
+		
 		// Set properties not already set in the constructor
 		entity.doWithProperties(new PropertyHandler<OrientPersistentProperty>() {
 			public void doWithPersistentProperty(OrientPersistentProperty prop) {
-				if(prop.isIdProperty()) {
-					//TODO custom provider for id properties
-					wrapper.setProperty(prop, readValue(dbObject.getId(), prop.getTypeInformation()));
-					return;
-				}
-				
-				
 				if (dbObject.getProperty(prop.getField().getName()) == null || entity.isConstructorArgument(prop)) {
 					return;
 				}
-
-				OrientDataWrapper<OrientVertex> dbo = new OrientDataWrapper<OrientVertex>((OrientVertex) dbObject);
-				Object obj = getValueInternal(prop, dbo, evaluator, null, readSession);
+				Object obj = objectResolver.getPropertyValue(prop);
 				wrapper.setProperty(prop, obj, fieldAccessOnly);
 			}
 		});
 		
 		entity.doWithAssociations(new AssociationHandler<OrientPersistentProperty>() {
-			
-			public void doWithAssociation(
-					Association<OrientPersistentProperty> association) {
-				OrientPersistentProperty inverseProp = association.getInverse();
+			public void doWithAssociation(Association<OrientPersistentProperty> association) {
+				OrientPersistentProperty inverse = association.getInverse();
+				Object resolved = objectResolver.getPropertyValue(inverse);
+				wrapper.setProperty(inverse, resolved);
 				
-				Object resolved = connectionResolver.resolveConnected(inverseProp, new IConnectionResolverCallback() {
-					
-					public Object resolve(OrientPersistentProperty property) {
-						return fetchConnected((OrientVertex) dbObject,property);
-						
-					}
-				});
-				
-				OrientDataWrapper<OrientVertex> entityList = new OrientDataWrapper<OrientVertex>((Set<OrientVertex>)resolved);
-				
-				Object value = getValueInternal(inverseProp, entityList, evaluator, null, readSession);
-				wrapper.setProperty(inverseProp, value);
 			}
 		});
-		
-		
 		return result;
 	}
-	
-	protected Object getValueInternal(OrientPersistentProperty prop, OrientDataWrapper<OrientVertex> dbo, SpELExpressionEvaluator eval,
-			Object parent, ReadSession readSession) {
 
-		OrientDBPropertyValueProvider provider = new OrientDBPropertyValueProvider( dbo, spELContext, this, readSession);
-		return provider.getPropertyValue(prop);
-	}
-	
-
-	
-	Set<OrientVertex> fetchConnected(OrientVertex source, OrientPersistentProperty property) {
-		Connected connected = property.getConnected();
-		
-		HashSet<OrientVertex> result = new HashSet<OrientVertex>();
-		Iterable<Vertex> vertices = source.getVertices(connected.direction(), connected.edgeType());
-		
-		Iterator<Vertex> iterator = vertices.iterator();
-		while(iterator.hasNext()) {
-			result.add((OrientVertex) iterator.next());
-		}
-		return result;
-	}
-	
-	@SuppressWarnings("unchecked")
-	private <T> T readValue(Object value, TypeInformation<?> type) {
-		Class<?> target = type.getType();
-		return target.isAssignableFrom(value.getClass()) ? (T)value : (T)conversionService.convert(value, target);	
-	}
-
-	
 	
 	
 	protected EntityInstantiators instantiators = new EntityInstantiators();
@@ -196,7 +131,6 @@ public class MappingOrientConverter extends AbstractOrientConverter {
 	private SpELContext spELContext;
 	private boolean fieldAccessOnly;
 	
-	private IConnectionResolver connectionResolver;
 	
 	private static final Logger log = LoggerFactory.getLogger(MappingOrientConverter.class);
 }

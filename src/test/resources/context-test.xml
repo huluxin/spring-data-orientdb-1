@@ -20,9 +20,6 @@
 
 	<bean id="converter" class="org.develspot.data.orientdb.convert.MappingOrientConverter">
 		<constructor-arg name="mappingContext" ref="mappingContext" />
-		<constructor-arg name="connectionResolver">
-			<bean class="org.develspot.data.orientdb.convert.DefaultConnectionResolver" />
-		</constructor-arg>
 	</bean>
 
 	

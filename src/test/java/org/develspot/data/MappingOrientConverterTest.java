@@ -15,7 +15,6 @@
  ******************************************************************************/
 package org.develspot.data;
 
-import org.develspot.data.orientdb.convert.DefaultConnectionResolver;
 import org.develspot.data.orientdb.convert.MappingOrientConverter;
 import org.develspot.data.orientdb.mapping.Connected;
 import org.develspot.data.orientdb.mapping.OrientMappingContext;
@@ -34,7 +33,7 @@ public class MappingOrientConverterTest extends AbstractDBTest {
 	@Test
 	public void read() {
 		OrientMappingContext mappingContext = new OrientMappingContext();
-		MappingOrientConverter converter = new MappingOrientConverter(mappingContext, new DefaultConnectionResolver());
+		MappingOrientConverter converter = new MappingOrientConverter(mappingContext);
 		
 		
 		OrientGraph orientGraph = new OrientGraph(orientDatasource.getConnection());
@@ -42,21 +41,32 @@ public class MappingOrientConverterTest extends AbstractDBTest {
 		customerVertex.setProperty("firstname", "Rheuma");
 		customerVertex.setProperty("lastname", "Kai");
 		
-		OrientVertex address = orientGraph.addVertex("class:Address");
-		orientGraph.addEdge(null, customerVertex, address, "has");
+		OrientVertex addressVertex = orientGraph.addVertex("class:Address");
+		addressVertex.setProperty("city", "Saarlouis");
+		
+		orientGraph.addEdge(null, customerVertex, addressVertex, "has");
 		
 		
-		OrientVertex related = orientGraph.addVertex("class:Related");
-		orientGraph.addEdge(null, customerVertex, related, "contains");
-		orientGraph.addEdge(null, address, related, "contains");
+		OrientVertex relatedVertex = orientGraph.addVertex("class:Related");
+		relatedVertex.setProperty("a", "1");
+		
+		orientGraph.addEdge(null, customerVertex, relatedVertex, "contains");
+		orientGraph.addEdge(null, addressVertex, relatedVertex, "contains");
 		
 		Customer cust = converter.read(Customer.class, customerVertex);
 		
 		Assert.assertEquals("Rheuma", cust.provideFirstname());
 		Assert.assertEquals("Kai", cust.provideLastname());
 		
-		Assert.assertEquals(cust.x, cust.address.x);
+		System.out.println("address: " + cust.address);
 		
+		Related x = cust.address.x;
+		Related y = cust.x;
+		
+		Assert.assertNotNull(x);
+		Assert.assertEquals("1",x.getA());
+		
+		Assert.assertEquals(x, y);
 		
 	}
 	
@@ -77,19 +87,25 @@ public class MappingOrientConverterTest extends AbstractDBTest {
 		
 		@Connected(edgeType="has")
 		private Address address;
-		
+
 		@Connected(edgeType="contains")
 		private Related x;
 		
 	}
 
 	class Address {
+		private String city;
 		@Connected(edgeType="contains")
 		private Related x;
 	}
 	
 	
 	class Related {
+		public String getA() {
+			return a;
+		}
+		
+		private String a;
 		
 	}
 }
