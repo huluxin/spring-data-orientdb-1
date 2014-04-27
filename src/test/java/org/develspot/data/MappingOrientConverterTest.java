@@ -15,11 +15,15 @@
  ******************************************************************************/
 package org.develspot.data;
 
+import java.math.BigInteger;
+
 import org.develspot.data.orientdb.convert.MappingOrientConverter;
 import org.develspot.data.orientdb.mapping.Connected;
 import org.develspot.data.orientdb.mapping.OrientMappingContext;
 import org.junit.Assert;
 import org.junit.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.annotation.Id;
 import org.springframework.test.context.ContextConfiguration;
 
 import com.tinkerpop.blueprints.impls.orient.OrientGraph;
@@ -32,9 +36,9 @@ public class MappingOrientConverterTest extends AbstractDBTest {
 
 	@Test
 	public void read() {
-		OrientMappingContext mappingContext = new OrientMappingContext();
-		MappingOrientConverter converter = new MappingOrientConverter(mappingContext);
-		
+//		OrientMappingContext mappingContext = new OrientMappingContext();
+//		MappingOrientConverter converter = new MappingOrientConverter(mappingContext);
+//		converter.afterPropertiesSet();
 		
 		OrientGraph orientGraph = new OrientGraph(orientDatasource.getConnection());
 		OrientVertex customerVertex = orientGraph.addVertex("class:Customer");
@@ -55,6 +59,7 @@ public class MappingOrientConverterTest extends AbstractDBTest {
 		
 		Customer cust = converter.read(Customer.class, customerVertex);
 		
+		Assert.assertNotNull(cust.id);
 		Assert.assertEquals("Rheuma", cust.provideFirstname());
 		Assert.assertEquals("Kai", cust.provideLastname());
 		
@@ -70,6 +75,8 @@ public class MappingOrientConverterTest extends AbstractDBTest {
 		
 	}
 	
+	@Autowired
+	private MappingOrientConverter converter;
 	
 	
 	class Customer {
@@ -90,6 +97,9 @@ public class MappingOrientConverterTest extends AbstractDBTest {
 
 		@Connected(edgeType="contains")
 		private Related x;
+		
+		@Id
+		private BigInteger id;
 		
 	}
 

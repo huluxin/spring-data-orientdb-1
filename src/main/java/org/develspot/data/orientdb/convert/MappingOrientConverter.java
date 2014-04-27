@@ -104,7 +104,8 @@ public class MappingOrientConverter extends AbstractOrientConverter {
 		// Set properties not already set in the constructor
 		entity.doWithProperties(new PropertyHandler<OrientPersistentProperty>() {
 			public void doWithPersistentProperty(OrientPersistentProperty prop) {
-				if (dbObject.getProperty(prop.getField().getName()) == null || entity.isConstructorArgument(prop)) {
+				if (!prop.isIdProperty() && 
+						(dbObject.getProperty(prop.getField().getName()) == null || entity.isConstructorArgument(prop))) {
 					return;
 				}
 				Object obj = objectResolver.getPropertyValue(prop);
